@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>팩맨 게임</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      text-align: center;
+      margin: 50px;
+    }
+    #game-container {
+      position: relative;
+      width: 300px;
+      height: 300px;
+      border: 1px solid #333;
+      margin: auto;
+      overflow: hidden;
+    }
+    .pacman {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background-color: yellow;
+    }
+    .ghost {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background-color: red;
+    }
+    .food {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background-color: green;
+    }
+    .obstacle {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      background-color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <div id="pacman" class="pacman"></div>
+    <div id="ghost1" class="ghost"></div>
+    <div id="ghost2" class="ghost"></div>
+    <div id="obstacle1" class="obstacle" style="top: 80px; left: 50px;"></div>
+    <div id="obstacle2" class="obstacle" style="top: 160px; left: 120px;"></div>
+    <div id="obstacle3" class="obstacle" style="top: 240px; left: 200px;"></div>
+    <div id="obstacle4" class="obstacle" style="top: 120px; left: 250px;"></div>
+  </div>
+
+  <script>
+    const pacman = document.getElementById('pacman');
+    const ghost1 = document.getElementById('ghost1');
+    const ghost2 = document.getElementById('ghost2');
+    const gameContainer = document.getElementById('game-container');
+
+    let pacmanX = 30;
+    let pacmanY = 30;
+    let ghost1X = 150;
+    let ghost1Y = 150;
+    let ghost2X = 200;
+    let ghost2Y = 200;
+    let score = 0;
+    let gameOver = false;
+
+    function updateGame() {
+      pacman.style.left = pacmanX + 'px';
+      pacman.style.top = pacmanY + 'px';
+
+      ghost1.style.left = ghost1X + 'px';
+      ghost1.style.top = ghost1Y + 'px';
+
+      ghost2.style.left = ghost2X + 'px';
+      ghost2.style.top = ghost2Y + 'px';
+    }
+
+    function movePacman(event) {
+      switch (event.key) {
+        case 'ArrowUp':
+          pacmanY = Math.max(pacmanY - 10, 0);
+          break;
+        case 'ArrowDown':
+          pacmanY = Math.min(pacmanY + 10, gameContainer.clientHeight - 30);
+          break;
+        case 'ArrowLeft':
+          pacmanX = Math.max(pacmanX - 10, 0);
+          break;
+        case 'ArrowRight':
+          pacmanX = Math.min(pacmanX + 10, gameContainer.clientWidth - 30);
+          break;
+      }
+
+      checkCollision();
+      updateGame();
+    }
+
+    function moveGhost(ghostX, ghostY) {
+      // 유령이 팩맨을 추적하도록 수정
+      const pacmanRect = pacman.getBoundingClientRect();
+      const ghostRect = ghost1.getBoundingClientRect();
+
+      if (pacmanX < ghostX) {
+        ghostX = Math.max(ghostX - 15, 0);
+      } else {
+        ghostX = Math.min(ghostX + 15, gameContainer.clientWidth - 30);
+      }
+
+      if (pacmanY < ghostY) {
+        ghostY = Math.max(ghostY - 15, 0);
+      } else {
+        ghostY = Math.min(ghostY + 15, gameContainer.clientHeight - 30);
+      }
+
+      return { ghostX, ghostY };
+    }
+
+    function moveGhosts() {
+      // 유령1 이동
+      const { ghostX: newGhost1X, ghostY: newGhost1Y } = moveGhost(ghost1X, ghost1Y);
+      ghost1X = newGhost1X;
+      ghost1Y = newGhost1Y;
+
+      // 유령2 이동
+      const { ghostX: newGhost2X, ghostY: newGhost2Y } = moveGhost(ghost2X, ghost2Y);
+      ghost2X = newGhost2X;
+      ghost2Y = newGhost2Y;
+
+      checkCollision();
+      updateGame();
+    }
+
+    function checkCollision() {
+      const pacmanRect = pacman.getBoundingClientRect();
+      const ghost1Rect = ghost1.getBoundingClientRect();
+      const ghost2Rect = ghost2.getBoundingClientRect();
+
+      if (
+        pacmanRect.left < ghost1Rect.right &&
+        pacmanRect.right > ghost1Rect.left &&
+        pacmanRect.top < ghost1Rect.bottom &&
+        pacmanRect.bottom > ghost1Rect.top
+      ) {
+        gameOver = true;
+        alert('Game Over! Score: ' + score);
+        resetGame();
+      }
+
+      if (
+        pacmanRect.left < ghost2Rect.right &&
+        pacmanRect.right > ghost2Rect.left &&
+        pacmanRect.top < ghost2Rect.bottom &&
+        pacmanRect.bottom > ghost2Rect.top
+      ) {
+        gameOver = true;
+        alert('Game Over! Score: ' + score);
+        resetGame();
+      }
+
+      const foods = document.querySelectorAll('.food');
+      foods.forEach(food => {
+        const foodRect = food.getBoundingClientRect();
+        if (
+          pacmanRect.left < foodRect.right &&
+          pacmanRect.right > foodRect.left &&
+          pacmanRect.top < foodRect.bottom &&
+          pacmanRect.bottom > foodRect.top
+        ) {
+          gameContainer.removeChild(food);
+          score += 10;
+          createFood();
+        }
+      });
+
+      const obstacles = document.querySelectorAll('.obstacle');
+      obstacles.forEach(obstacle => {
+        const obstacleRect = obstacle.getBoundingClientRect();
+        if (
+          pacmanRect.left < obstacleRect.right &&
+          pacmanRect.right > obstacleRect.left &&
+          pacmanRect.top < obstacleRect.bottom &&
+          pacmanRect.bottom > obstacleRect.top
+        ) {
+          gameOver = true;
+          alert('Game Over! Score: ' + score);
+          resetGame();
+        }
+      });
+    }
+
+    function createFood() {
+      const food = document.createElement('div');
+      food.classList.add('food');
+      const foodX = Math.floor(Math.random() * (gameContainer.clientWidth - 20));
+      const foodY = Math.floor(Math.random() * (gameContainer.clientHeight - 20));
+      food.style.left = foodX + 'px';
+      food.style.top = foodY + 'px';
+      gameContainer.appendChild(food);
+    }
+
+    function createObstacle(top, left) {
+      const obstacle = document.createElement('div');
+      obstacle.classList.add('obstacle');
+      obstacle.style.top = top + 'px';
+      obstacle.style.left = left + 'px';
+      gameContainer.appendChild(obstacle);
+    }
+
+    function resetGame() {
+      pacmanX = 30;
+      pacmanY = 30;
+      ghost1X = 150;
+      ghost1Y = 150;
+      ghost2X = 200;
+      ghost2Y = 200;
+      score = 0;
+      // 게임을 초기화할 때 장애물과 새로운 음식을 추가
+      createFood();
+      createObstacle(80, 50);
+      createObstacle(160, 120);
+      createObstacle(240, 200);
+      createObstacle(120, 250);
+      updateGame();
+      gameOver = false;
+    }
+
+    document.addEventListener('keydown', function(event) {
+      if (!gameOver) {
+        movePacman(event);
+      }
+    });
+
+    document.addEventListener('keydown', function(event) {
+      // R 키를 누르면 게임 재시작
+      if (event.key === 'r' || event.key === 'R') {
+        resetGame();
+      }
+    });
+
+    setInterval(function() {
+      if (!gameOver) {
+        // 두 유령을 자동으로 이동
+        moveGhosts();
+      }
+    }, 500);
+
+    createFood();
+    updateGame();
+  </script>
+</body>
+</html>
